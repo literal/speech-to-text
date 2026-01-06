@@ -165,7 +165,7 @@ class MCPServer:
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "result": {
-                    "content": [{"type": "text", "text": "Speech-to-text transcription activated. Press Right Ctrl to start recording."}],
+                    "content": [{"type": "text", "text": "Speech-to-text transcription activated. Press Right Super to start recording."}],
                     "isError": False
                 }
             }
@@ -522,7 +522,7 @@ class StdoutOutputHandler(OutputHandler):
 
 
 class KeyboardMonitor:
-    """Monitors keyboard devices for Right Ctrl key events."""
+    """Monitors keyboard devices for Right Super key events."""
     
     def __init__(self, keyboard_name: Optional[str] = None) -> None:
         self.keyboard_name = keyboard_name
@@ -563,20 +563,20 @@ class KeyboardMonitor:
         return keyboards
     
     async def monitor_device(self, dev_path: str, on_key_press: KeyEventCallback, on_key_release: KeyEventCallback) -> None:
-        """Monitor a single keyboard device for Right Ctrl events."""
+        """Monitor a single keyboard device for Right Super events."""
         dev = evdev.InputDevice(dev_path)
-        self.logger.info(f"Waiting for Right Ctrl key press on {dev.name} ({dev_path})")
+        self.logger.info(f"Waiting for Right Super key press on {dev.name} ({dev_path})")
         
         try:
             async for event in dev.async_read_loop():
                 if event.type == evdev.ecodes.EV_KEY:
                     key_event = evdev.categorize(event)
-                    if key_event.keycode == 'KEY_RIGHTCTRL':  # type: ignore[attr-defined]
+                    if key_event.keycode == 'KEY_RIGHTMETA':  # type: ignore[attr-defined]
                         if key_event.keystate == key_event.key_down:  # type: ignore[attr-defined]
-                            self.logger.info("Right Ctrl key pressed")
+                            self.logger.info("Right Super key pressed")
                             on_key_press()
                         elif key_event.keystate == key_event.key_up:  # type: ignore[attr-defined]
-                            self.logger.info("Right Ctrl key released")
+                            self.logger.info("Right Super key released")
                             on_key_release()
         except Exception as e:
             self.logger.exception(f"Error monitoring device {dev_path}: {e}")
@@ -610,12 +610,12 @@ class SpeechToTextService:
         self.output_handler = output_handler
     
     def on_key_press(self) -> None:
-        """Handle Right Ctrl key press."""
+        """Handle Right Super key press."""
         self.logger.info("Key press detected, starting audio recording")
         self.audio_recorder.start_recording()
-    
+
     def on_key_release(self) -> None:
-        """Handle Right Ctrl key release."""
+        """Handle Right Super key release."""
         self.logger.info("Key release detected, processing audio")
         audio_data = self.audio_recorder.stop_recording()
         if audio_data:
