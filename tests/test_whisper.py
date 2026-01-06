@@ -1,42 +1,39 @@
 import sys
 import os
 import wave
-import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from stt_mcp_server_linux import WhisperEngine
+import transcription_server
+from transcription_server import audio_bytes_to_numpy, load_model
 
 
-class TestWhisperIntegration:
-    """Test Whisper transcription with actual audio data."""
-    
-    def setup_method(self):
-        """Setup test fixtures."""
-        self.whisper_engine = WhisperEngine("en")
-    
+class TestTranscriptionServer:
+    """Test transcription server functionality with actual Whisper model."""
+
+    @classmethod
+    def setup_class(cls):
+        """Load Whisper model once for all tests."""
+        load_model("small.en")
+
     def load_real_audio(self) -> bytes:
         """Load the real hello speech WAV file.
-        
+
         Returns raw audio bytes from the test WAV file.
         """
         # https://freesound.org/people/AderuMoro/sounds/213282/
-        # The original file is 48kHz mono 16-bit, but Whisper expects 16kHz
-        test_file = os.path.join(os.path.dirname(__file__), 
+        test_file = os.path.join(os.path.dirname(__file__),
                                 "213282__aderumoro__hello-female-friendly-professional-16kHz.wav")
-        
+
         if not os.path.exists(test_file):
             raise FileNotFoundError(f"Test audio file not found: {test_file}")
-        
+
         with wave.open(test_file, 'rb') as wav_file:
-            # Read all audio frames
             audio_data = wav_file.readframes(wav_file.getnframes())
-            
-            # Get audio parameters for validation
+
             channels = wav_file.getnchannels()
             sample_width = wav_file.getsampwidth()
             framerate = wav_file.getframerate()
-            
-            # Convert to 16kHz mono 16-bit if needed
+
             if channels != 1 or sample_width != 2 or framerate != 16000:
                 try:
                     import numpy as np
@@ -53,64 +50,63 @@ class TestWhisperIntegration:
                         raw_audio = np.frombuffer(audio_data, dtype=np.int32)
                         audio_np = raw_audio.astype(np.float32) / 2147483648.0
                     else:
-                        return audio_data  # Use as-is if unknown format
-                    
-                    # Handle stereo to mono conversion
+                        return audio_data
+
                     if channels == 2:
                         audio_np = audio_np.reshape(-1, 2).mean(axis=1)
-                    
-                    # Resample if needed (simple approach)
+
                     if framerate != 16000:
-                        # Simple resampling by taking every nth sample
                         step = framerate / 16000
                         indices = np.arange(0, len(audio_np), step).astype(int)
                         audio_np = audio_np[indices]
-                    
-                    # Convert back to 16-bit
+
                     audio_data = (audio_np * 32767).astype(np.int16).tobytes()
                 except ImportError:
-                    # If numpy not available, use audio as-is
                     pass
-            
+
             return audio_data
-    
+
+    def test_audio_bytes_to_numpy(self):
+        """Test conversion of audio bytes to numpy array."""
+        import numpy as np
+
+        # Create test audio data
+        test_audio = b"\x00\x00\xff\x7f"  # Two 16-bit samples
+        result = audio_bytes_to_numpy(test_audio)
+
+        assert isinstance(result, np.ndarray)
+        assert result.dtype == np.float32
+        assert len(result) == 2
+
     def test_whisper_transcription_with_real_speech(self):
-        """Test Whisper transcription with real 'hello' speech audio.
-        
-        Uses actual human speech from the test WAV file to verify
-        that Whisper correctly transcribes the word 'hello'.
-        """
-        # Load real audio data
+        """Test Whisper transcription with real 'hello' speech audio."""
         audio_bytes = self.load_real_audio()
-        
-        # Verify we have audio data
+
         assert len(audio_bytes) > 0
-        
-        # Test transcription with real speech
-        result = self.whisper_engine.transcribe(audio_bytes)
-        
-        # Verify the method completes without error
-        assert isinstance(result, str)
-        
-        # Verify transcription contains "hello" (case-insensitive)
-        # The file is specifically a "hello" greeting
-        result_lower = result.lower().strip()
-        assert "hello" in result_lower, f"Expected 'hello' in transcription, got: '{result}'"
-    
+
+        audio_np = audio_bytes_to_numpy(audio_bytes)
+        result = transcription_server.model.transcribe(audio_np, fp16=False, language="en")
+        text = result.get("text", "").strip()
+
+        assert isinstance(text, str)
+        result_lower = text.lower().strip()
+        assert "hello" in result_lower, f"Expected 'hello' in transcription, got: '{text}'"
+
     def test_empty_audio_handling(self):
         """Test that empty audio is handled gracefully."""
-        result = self.whisper_engine.transcribe(b"")
-        assert result == ""
-    
+        audio_np = audio_bytes_to_numpy(b"")
+        assert len(audio_np) == 0
+
     def test_file_exists(self):
         """Test that the required audio file exists."""
-        test_file = os.path.join(os.path.dirname(__file__), 
+        test_file = os.path.join(os.path.dirname(__file__),
                                 "213282__aderumoro__hello-female-friendly-professional-16kHz.wav")
         assert os.path.exists(test_file), f"Test audio file missing: {test_file}"
-    
+
     def test_short_audio_handling(self):
         """Test that very short audio is handled gracefully."""
-        # Create very short audio (0.1 seconds)
         short_audio = b"\x00\x00" * 1600  # 1600 samples = 0.1s at 16kHz
-        result = self.whisper_engine.transcribe(short_audio)
-        assert isinstance(result, str)
+        audio_np = audio_bytes_to_numpy(short_audio)
+        result = transcription_server.model.transcribe(audio_np, fp16=False, language="en")
+        text = result.get("text", "").strip()
+        assert isinstance(text, str)

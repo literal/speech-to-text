@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
+import os
 import sys
 
 
 def main():
-    """Download the Whisper small.en model."""
+    """Download the specified Whisper model."""
 
-    print(f"Downloading Whisper small.en model.")
+    model_name = os.environ.get("MODEL", "small.en")
+    print(f"Downloading Whisper {model_name} model.")
 
     try:
         import whisper
 
-        print("Loading Whisper small.en model...")
-        model = whisper.load_model("small.en")
-        print("Whisper small.en model downloaded successfully!")
+        print(f"Loading Whisper {model_name} model...")
+        model = whisper.load_model(model_name)
+        print(f"Whisper {model_name} model downloaded successfully!")
         
         print("Testing model with empty audio...")
         import numpy as np

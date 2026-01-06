@@ -1,4 +1,5 @@
+flask
 openai-whisper
 pytest
+requests
 sounddevice
-vosk
