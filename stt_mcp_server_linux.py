@@ -437,9 +437,10 @@ class OutputHandler:
 
 class TmuxOutputHandler(OutputHandler):
     """Tmux-based output handler."""
-    
-    def __init__(self, session_name: str) -> None:
+
+    def __init__(self, session_name: str, socket_path: Optional[str] = None) -> None:
         self.session_name = self._validate_session_name(session_name)
+        self.socket_path = socket_path
         self.logger = logging.getLogger(__name__)
     
     def _validate_session_name(self, session_name: str) -> str:
@@ -493,9 +494,14 @@ class TmuxOutputHandler(OutputHandler):
 
             if sanitized_text != text:
                 self.logger.info(f"Sanitized transcription text from '{text}' to '{sanitized_text}'")
-            
+
+            cmd = ["tmux"]
+            if self.socket_path:
+                cmd.extend(["-S", self.socket_path])
+            cmd.extend(["send-keys", "-t", sanitized_session, sanitized_text])
+
             result = subprocess.run(
-                ["tmux", "send-keys", "-t", sanitized_session, sanitized_text],
+                cmd,
                 capture_output=True,
                 text=True
             )
@@ -658,6 +664,7 @@ class Config:
     output_type: str
     pad_up_to_seconds: float
     session: str
+    tmux_socket: Optional[str]
 
     @classmethod
     def from_args(cls, args: argparse.Namespace) -> 'Config':
@@ -669,7 +676,8 @@ class Config:
             model=args.model,
             output_type=args.output,
             pad_up_to_seconds=args.pad_up_to_seconds,
-            session=args.session
+            session=args.session,
+            tmux_socket=args.tmux_socket
         )
 
 
@@ -719,6 +727,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help="Tmux session name (default: claude)"
     )
     parser.add_argument(
+        "--tmux-socket",
+        type=str,
+        default=None,
+        help="Path to tmux socket file (optional). Use this when running in a container to bypass socket directory permission checks"
+    )
+    parser.add_argument(
         "--debug",
         choices=["off", "json", "human"],
         default="off",
@@ -754,7 +768,7 @@ def main() -> None:
 
         output_handler: OutputHandler
         if config.output_type == "tmux":
-            output_handler = TmuxOutputHandler(config.session)
+            output_handler = TmuxOutputHandler(config.session, config.tmux_socket)
         else:
             output_handler = StdoutOutputHandler()
 

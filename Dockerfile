@@ -3,13 +3,39 @@ FROM debian:trixie-slim
 # Install base dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     libasound2-dev \
+    libasound2-plugins \
+    libpulse0 \
     portaudio19-dev \
     procps \
-    tmux \
     python3 \
     python3-pip \
     python3-venv \
     udev
+
+# Build tmux 3.6a from source to match host version
+# (Debian's tmux 3.5a has incompatible socket protocol)
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    autoconf \
+    automake \
+    bison \
+    ca-certificates \
+    gcc \
+    git \
+    libc6-dev \
+    libevent-dev \
+    libncurses-dev \
+    make \
+    pkg-config \
+    && git clone --depth 1 --branch 3.6a https://github.com/tmux/tmux.git /tmp/tmux \
+    && cd /tmp/tmux \
+    && sh autogen.sh \
+    && ./configure --prefix=/usr/local \
+    && make -j$(nproc) \
+    && make install \
+    && rm -rf /tmp/tmux \
+    && apt-get purge -y autoconf automake bison gcc git libc6-dev libevent-dev libncurses-dev make pkg-config \
+    && apt-get autoremove -y \
+    && apt-get install -y libevent-core-2.1-7t64 libncurses6
 
 # Install vosk dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -70,7 +96,7 @@ RUN usermod -aG audio ${USER}
 # the user inside of the container must be the member
 # of the /dev/input group ID present outside of the container.
 ARG INPUT_GID=900
-RUN getent group ${INPUT_GID} || groupadd --non-unique --gid ${INPUT_GID} ${INPUT_GID}
+RUN getent group ${INPUT_GID} || groupadd --non-unique --gid ${INPUT_GID} inputgrp
 RUN usermod -aG ${INPUT_GID} ${USER}
 # The membership of the user in the /dev/input group ID present inside of the container
 # does not matter for this application, but let's still make the ${USER} to be member of this group
@@ -99,6 +125,11 @@ RUN cd /home/${USER} && python3 -m venv --system-site-packages venv && . venv/bi
 RUN . /home/${USER}/venv/bin/activate && python -m pip install torch==2.* --index-url https://download.pytorch.org/whl/cpu
 RUN . /home/${USER}/venv/bin/activate && python -m pip install -r requirements.txt
 RUN echo "if [ -f /home/${USER}/venv/bin/activate  ]; then . /home/${USER}/venv/bin/activate; fi" >> /home/${USER}/.bashrc
+
+# Configure ALSA to use PulseAudio via the ALSA PulseAudio plugin
+# This allows sounddevice/PortAudio to work through PulseAudio even without native PulseAudio support
+RUN echo 'pcm.!default {\n    type pulse\n}\nctl.!default {\n    type pulse\n}' > /home/${USER}/.asoundrc && chown ${USER}:${USER} /home/${USER}/.asoundrc
+
 COPY stt_mcp_server_linux.py .
 
 # Avoid overloading the system with too many openblas threads
