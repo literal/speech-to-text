@@ -3,16 +3,16 @@ import sys
 
 
 def main():
-    """Download the Whisper tiny model."""
-    
-    print(f"Downloading Whisper tiny model.")
-    
+    """Download the Whisper small.en model."""
+
+    print(f"Downloading Whisper small.en model.")
+
     try:
         import whisper
-        
-        print("Loading Whisper tiny model...")
-        model = whisper.load_model("tiny")
-        print("Whisper tiny model downloaded successfully!")
+
+        print("Loading Whisper small.en model...")
+        model = whisper.load_model("small.en")
+        print("Whisper small.en model downloaded successfully!")
         
         print("Testing model with empty audio...")
         import numpy as np

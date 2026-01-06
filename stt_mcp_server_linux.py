@@ -358,7 +358,7 @@ class WhisperEngine(TranscriptionEngine):
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"Loading Whisper model with language: {language}")
         import whisper  # type: ignore[import-untyped]
-        self.model = whisper.load_model("tiny")
+        self.model = whisper.load_model("small.en")
         self.logger.info("Whisper model loaded successfully")
     
     def transcribe(self, audio_data: bytes) -> str:
