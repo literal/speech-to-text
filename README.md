@@ -1,5 +1,8 @@
 # Speech-to-Text for Linux
 
+> [!IMPORTANT]
+> This project is for **Linux only** (X11 and Wayland).
+
 > Based on [stt-mcp-server-linux](https://github.com/marcindulak/stt-mcp-server-linux) by [marcindulak](https://github.com/marcindulak), licensed under Apache 2.0.
 
 ## Functionality overview
