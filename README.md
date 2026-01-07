@@ -1,10 +1,8 @@
-[![test](https://github.com/marcindulak/speech-to-text/actions/workflows/test.yml/badge.svg)](https://github.com/marcindulak/speech-to-text/actions/workflows/test.yml)
+# Speech-to-Text for Linux
 
-[![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge.svg)](https://github.com/hesreallyhim/awesome-claude-code)
+> Based on [stt-mcp-server-linux](https://github.com/marcindulak/stt-mcp-server-linux) by [marcindulak](https://github.com/marcindulak), licensed under Apache 2.0.
 
-> Co-Authored-By: Claude
-
-# Functionality overview
+## Functionality overview
 
 Local speech-to-text for Linux using Whisper.
 
@@ -79,7 +77,7 @@ Host
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/marcindulak/speech-to-text
+   git clone https://github.com/literal/speech-to-text
    cd speech-to-text
    ```
 
