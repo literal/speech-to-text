@@ -57,18 +57,18 @@ TimeoutStopSec=30
 WantedBy=multi-user.target
 EOF
 
-# --- STT Client service ---
-echo "Creating stt-client service..."
-cat > /etc/systemd/system/stt-client.service << EOF
+# --- STT Client service (user service for PipeWire audio access) ---
+echo "Creating stt-client user service..."
+USER_SERVICE_DIR="$ACTUAL_HOME/.config/systemd/user"
+mkdir -p "$USER_SERVICE_DIR"
+cat > "$USER_SERVICE_DIR/stt-client.service" << EOF
 [Unit]
 Description=Speech-to-Text Client
-After=stt-server.service ydotoold.service
-Requires=ydotoold.service
+After=pipewire.service stt-server.service
 Wants=stt-server.service
 
 [Service]
 Type=simple
-User=$ACTUAL_USER
 Environment=KEYBOARD_LAYOUT=de
 Environment=LANGUAGE=auto
 ExecStartPre=/usr/bin/sleep 2
@@ -77,24 +77,30 @@ Restart=on-failure
 RestartSec=5
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 EOF
+chown "$ACTUAL_USER:$ACTUAL_USER" "$USER_SERVICE_DIR/stt-client.service"
 
 echo ""
-echo "Reloading systemd daemon..."
+echo "Reloading systemd daemons..."
 systemctl daemon-reload
 
 echo ""
-echo "Enabling services..."
+echo "Enabling and starting system services..."
 systemctl enable ydotoold.service
 systemctl enable stt-server.service
-systemctl enable stt-client.service
-
-echo ""
-echo "Starting services..."
 systemctl start ydotoold.service
 systemctl start stt-server.service
-systemctl start stt-client.service
+
+echo ""
+echo "Enabling and starting user service (stt-client)..."
+# Run systemctl --user as the actual user (requires XDG_RUNTIME_DIR)
+runuser -u "$ACTUAL_USER" -- bash -c "
+    export XDG_RUNTIME_DIR=/run/user/\$(id -u)
+    systemctl --user daemon-reload
+    systemctl --user enable stt-client.service
+    systemctl --user start stt-client.service
+"
 
 echo ""
 echo "Services status:"
@@ -104,13 +110,20 @@ echo ""
 echo "--- stt-server ---"
 systemctl status stt-server.service --no-pager || true
 echo ""
-echo "--- stt-client ---"
-systemctl status stt-client.service --no-pager || true
+echo "--- stt-client (user service) ---"
+runuser -u "$ACTUAL_USER" -- bash -c "
+    export XDG_RUNTIME_DIR=/run/user/\$(id -u)
+    systemctl --user status stt-client.service --no-pager
+" || true
 
 echo ""
 echo "Done! Services installed and started."
 echo ""
 echo "Useful commands:"
-echo "  sudo systemctl status stt-server stt-client ydotoold"
-echo "  sudo journalctl -u stt-server -f"
-echo "  sudo journalctl -u stt-client -f"
+echo "  System services:"
+echo "    sudo systemctl status stt-server ydotoold"
+echo "    sudo journalctl -u stt-server -f"
+echo ""
+echo "  User service (stt-client):"
+echo "    systemctl --user status stt-client"
+echo "    journalctl --user -u stt-client -f"

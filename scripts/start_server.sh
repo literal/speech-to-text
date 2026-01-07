@@ -16,6 +16,6 @@ echo "Starting transcription server on port $PORT with model $MODEL..."
 exec docker run --rm \
     --name "$CONTAINER_NAME" \
     --publish "$PORT:5000" \
-    --volume ~/.stt-mcp-server-linux/whisper:/.whisper \
+    --volume ~/.speech-to-text/whisper:/.whisper \
     stt-transcription-server \
     /home/nonroot/venv/bin/python /app/transcription_server.py --model "$MODEL"

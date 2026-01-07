@@ -1,4 +1,4 @@
-[![test](https://github.com/marcindulak/stt-mcp-server-linux/actions/workflows/test.yml/badge.svg)](https://github.com/marcindulak/stt-mcp-server-linux/actions/workflows/test.yml)
+[![test](https://github.com/marcindulak/speech-to-text/actions/workflows/test.yml/badge.svg)](https://github.com/marcindulak/speech-to-text/actions/workflows/test.yml)
 
 [![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge.svg)](https://github.com/hesreallyhim/awesome-claude-code)
 
@@ -15,7 +15,7 @@ The system uses a split architecture:
 Text injection works in any application (terminals, GUI apps, browsers) on both X11 and Wayland.
 
 > [!WARNING]
-> This project will create `~/.stt-mcp-server-linux` directory.
+> This project will create `~/.speech-to-text` directory.
 
 # Architecture
 
@@ -79,8 +79,8 @@ Host
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/marcindulak/stt-mcp-server-linux
-   cd stt-mcp-server-linux
+   git clone https://github.com/marcindulak/speech-to-text
+   cd speech-to-text
    ```
 
 2. Build the Docker image:
@@ -120,16 +120,27 @@ sudo bash scripts/setup_services.sh
 ```
 
 This creates and enables three services:
-- `ydotoold` - keyboard/mouse input daemon
-- `stt-server` - transcription server (Docker)
-- `stt-client` - keyboard monitor and audio client
+- `ydotoold` - keyboard/mouse input daemon (system service)
+- `stt-server` - transcription server in Docker (system service)
+- `stt-client` - keyboard monitor and audio client (user service)
 
-Manage with standard systemctl commands:
+> [!NOTE]
+> The `stt-client` runs as a user service to access PipeWire audio.
+
+Manage system services:
 
 ```bash
-sudo systemctl status stt-server stt-client ydotoold
-sudo systemctl restart stt-client
-sudo journalctl -u stt-client -f
+sudo systemctl status stt-server ydotoold
+sudo systemctl restart stt-server
+sudo journalctl -u stt-server -f
+```
+
+Manage stt-client (user service):
+
+```bash
+systemctl --user status stt-client
+systemctl --user restart stt-client
+journalctl --user -u stt-client -f
 ```
 
 ## Configuration

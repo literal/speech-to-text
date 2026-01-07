@@ -4,9 +4,9 @@ set -Eeuo pipefail
 
 MODEL=${MODEL:-small.en}
 
-mkdir -p ~/.stt-mcp-server-linux/whisper && chmod 0700 ~/.stt-mcp-server-linux/whisper
-docker run --rm --tty --name stt-mcp-server-linux-download \
+mkdir -p ~/.speech-to-text/whisper && chmod 0700 ~/.speech-to-text/whisper
+docker run --rm --tty --name speech-to-text-download \
        --env MODEL="$MODEL" \
-       --volume ~/.stt-mcp-server-linux/whisper:/.whisper \
+       --volume ~/.speech-to-text/whisper:/.whisper \
        --volume $(pwd)/scripts:/app/scripts \
-       stt-mcp-server-linux bash -ci "python scripts/download_whisper_model.py"
+       stt-transcription-server bash -ci "python scripts/download_whisper_model.py"
