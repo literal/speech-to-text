@@ -98,23 +98,7 @@ Host
 
 ## Running
 
-Start the transcription server (in one terminal):
-
-```bash
-bash scripts/start_server.sh
-```
-
-Start the client (in another terminal):
-
-```bash
-bash scripts/start_client.sh
-```
-
-Press **Right Super** (Right Windows key) to start recording. Release to transcribe and inject text.
-
-## Running as systemd services
-
-To start STT automatically on boot:
+Install and start the systemd services:
 
 ```bash
 sudo bash scripts/setup_services.sh
@@ -144,29 +128,45 @@ systemctl --user restart stt-client
 journalctl --user -u stt-client -f
 ```
 
+### Usage
+
+Press and hold **Right Super** (Right Windows key) to record. Release to transcribe and inject text at the cursor. The activation key can be changed in the [configuration](#client-options).
+
 ## Configuration
+
+Configuration options are set in `scripts/setup_services.sh`. Edit this file before running the setup, or modify the service files afterwards.
 
 ### Server options
 
-```bash
-PORT=5000 MODEL=small.en bash scripts/start_server.sh
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MODEL` | `small.en` | Whisper model to use |
+| `PORT` | `5000` | HTTP port for the transcription API |
+
+Service file: `/etc/systemd/system/stt-server.service`
 
 ### Client options
 
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `KEYBOARD_LAYOUT` | `de` | Keyboard layout (`us`, `de`) |
+| `LANGUAGE` | `auto` | Transcription language or `auto` |
+| `KEY` | `KEY_RIGHTMETA` | Activation key |
+| `PAD_SECONDS` | `30` | Silence padding in seconds |
+
+Service file: `~/.config/systemd/user/stt-client.service`
+
+After modifying service files, reload and restart:
+
 ```bash
-API_URL=http://localhost:5000 \
-KEY=KEY_RIGHTMETA \
-LANGUAGE=auto \
-PAD_SECONDS=30 \
-KEYBOARD_LAYOUT=us \
-DEBUG=1 \
-bash scripts/start_client.sh
+# For stt-server
+sudo systemctl daemon-reload
+sudo systemctl restart stt-server
+
+# For stt-client
+systemctl --user daemon-reload
+systemctl --user restart stt-client
 ```
-
-Available activation keys: `KEY_RIGHTMETA` (Right Super), `KEY_RIGHTCTRL` (Right Ctrl), etc.
-
-Available keyboard layouts: `us`, `de`. Set `KEYBOARD_LAYOUT` to match your system keyboard layout.
 
 # Running tests
 
@@ -190,6 +190,7 @@ Flask HTTP API that:
 - Loads Whisper model at startup
 - Exposes `/transcribe` endpoint (POST raw PCM audio)
 - Exposes `/health` endpoint for container health checks
+- Exposes `/info` endpoint (returns model name and load status)
 - Returns JSON with transcribed text
 
 ## Host: stt_client.py
